@@ -1,93 +1,86 @@
 pipeline {
-    agent {
-        label 'docker'
+  agent { label 'docker' }
+
+  parameters {
+    choice(
+      name: 'ENVIRONMENT',
+      choices: ['staging', 'production'],
+      description: 'Choose deploy target'
+    )
+
+    string(
+      name: 'VERSION',
+      defaultValue: '1.0.0',
+      description: 'Version to deploy'
+    )
+
+    booleanParam(
+      name: 'RUN_TESTS',
+      defaultValue: true,
+      description: 'Run tests before deploy?'
+    )
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        echo "Environment: ${params.ENVIRONMENT}"
+        echo "Version:     ${params.VERSION}"
+        echo "Run Tests:   ${params.RUN_TESTS}"
+
+        git branch: 'main',
+            url: 'https://github.com/ahmedrabe33/JENKINS-LAB1.git'
+      }
     }
 
-    parameters {
-        choice(
-            name: 'ENVIRONMENT',
-            choices: ['staging', 'production'],
-            description: 'Choose the environment to deploy to'
-        )
-
-        string(
-            name: 'VERSION',
-            defaultValue: '1.0.0',
-            description: 'Enter the version number to deploy'
-        )
-
-        booleanParam(
-            name: 'RUN_TESTS',
-            defaultValue: true,
-            description: 'Run tests before deployment?'
-        )
+    stage('Install') {
+      steps {
+        sh '''
+          npm install
+        '''
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                echo "Checking out source code..."
-                git branch: 'main', url: 'https://github.com/AbdelrhmanEzzat/digi-jenkins.git'
-            }
-        }
-
-        stage('Install') {
-            steps {
-                echo "Installing dependencies..."
-                sh 'npm install'
-            }
-        }
-
-        stage('Test') {
-            when {
-                expression {
-                    return params.RUN_TESTS == true
-                }
-            }
-            steps {
-                echo "Running tests..."
-                sh 'npm test'
-            }
-        }
-
-        stage('Approval') {
-            when {
-                expression {
-                    return params.ENVIRONMENT == 'production'
-                }
-            }
-            steps {
-                timeout(time: 1, unit: 'MINUTES') {
-                    input message: "Deploy version ${params.VERSION} to PRODUCTION?",
-                          ok: "Yes, Deploy!"
-                }
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo "Deploying version ${params.VERSION} to ${params.ENVIRONMENT}..."
-                sh """
-                    echo "Deploying app..."
-                    echo "Environment: ${params.ENVIRONMENT}"
-                    echo "Version: ${params.VERSION}"
-                    echo "Deployment completed successfully"
-                """
-            }
-        }
+    stage('Test') {
+      when {
+        expression { params.RUN_TESTS == true }
+      }
+      steps {
+        sh '''
+          npm test
+        '''
+      }
     }
 
-    post {
-        success {
-            echo "Deployment of version ${params.VERSION} to ${params.ENVIRONMENT} completed successfully!"
-        }
-
-        failure {
-            echo "Pipeline failed."
-        }
-
-        always {
-            echo "Build finished."
-        }
+    stage('Approval') {
+      when {
+        expression { params.ENVIRONMENT == 'production' }
+      }
+      steps {
+        input message: "Deploy v${params.VERSION} to PRODUCTION?",
+              ok: 'Yes, Deploy!'
+      }
     }
+
+    stage('Deploy') {
+      steps {
+        echo "Deploying v${params.VERSION} to ${params.ENVIRONMENT}..."
+        echo "✅ Deploy done!"
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "✅ Done!"
+    }
+
+    failure {
+      echo "❌ Failed!"
+    }
+
+    always {
+      cleanWs()
+    }
+  }
 }
