@@ -1,21 +1,25 @@
 pipeline {
-    agent { label 'docker ' }
+    agent { label 'node-agent' }
 
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/AbdelrhmanEzzat/digi-jenkins.git'
+                    url: 'https://github.com/ahmedrabe33/jenkins_labs.git'
             }
         }
 
         stage('Show Agent Info') {
             steps {
                 sh '''
+                export NVM_DIR="$HOME/.nvm"
+                . "$NVM_DIR/nvm.sh"
+
                 echo "Running on EC2 Agent"
                 whoami
                 hostname
                 pwd
+
                 java -version
                 node -v
                 npm -v
@@ -25,13 +29,23 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                sh '''
+                export NVM_DIR="$HOME/.nvm"
+                . "$NVM_DIR/nvm.sh"
+
+                npm install
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'npm test'
+                sh '''
+                export NVM_DIR="$HOME/.nvm"
+                . "$NVM_DIR/nvm.sh"
+
+                npm test
+                '''
             }
         }
     }
