@@ -1,0 +1,103 @@
+pipeline {
+    agent { label 'docker' }
+
+    environment {
+        APP_NAME = 'jenkins-cicd-lab'
+        ENVIRONMENT_NAME = 'staging'
+        VERSION = "1.0.${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/ahmedrabe33/jenkins_labs.git'
+
+                echo "Building: ${APP_NAME}"
+                echo "Version: ${VERSION}"
+                echo "Env: ${ENVIRONMENT_NAME}"
+                echo "Job Name: ${JOB_NAME}"
+                echo "Workspace: ${WORKSPACE}"
+            }
+        }
+
+        stage('Show Agent Info') {
+            steps {
+                sh '''
+                export NVM_DIR="$HOME/.nvm"
+                . "$NVM_DIR/nvm.sh"
+
+                echo "Running on agent:"
+                whoami
+                hostname
+                pwd
+
+                echo "Java version:"
+                java -version
+
+                echo "Node version:"
+                node -v
+
+                echo "NPM version:"
+                npm -v
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                export NVM_DIR="$HOME/.nvm"
+                . "$NVM_DIR/nvm.sh"
+
+                echo "Installing dependencies for $APP_NAME..."
+                npm install
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                export NVM_DIR="$HOME/.nvm"
+                . "$NVM_DIR/nvm.sh"
+
+                echo "Running tests for $APP_NAME version $VERSION..."
+                npm test
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deploying ${APP_NAME} v${VERSION} to ${ENVIRONMENT_NAME}..."
+
+                sh '''
+                echo "Simulating deployment..."
+                echo "Application: $APP_NAME"
+                echo "Version: $VERSION"
+                echo "Environment: $ENVIRONMENT_NAME"
+                sleep 2
+                echo "Deploy done ✅"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ ${APP_NAME} v${VERSION} deployed to ${ENVIRONMENT_NAME} successfully!"
+            echo "Build #${BUILD_NUMBER} finished."
+        }
+
+        failure {
+            echo "❌ ${APP_NAME} v${VERSION} failed on ${ENVIRONMENT_NAME}."
+            echo "Check the Console Output."
+        }
+
+        always {
+            echo "Pipeline finished for job: ${JOB_NAME}"
+            cleanWs()
+        }
+    }
+}
